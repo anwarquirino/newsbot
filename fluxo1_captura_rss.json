@@ -1,0 +1,96 @@
+{
+  "name": "Fluxo 1 — Captura RSS",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "minutes", "minutesInterval": 15 }] }
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Schedule 15min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 360]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=tecnologia&hl=pt-BR&gl=BR&ceid=BR:pt-419",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "RSS Google News",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [460, 120]
+    },
+    {
+      "parameters": { "url": "https://techcrunch.com/feed/", "options": {} },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "RSS TechCrunch",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [460, 280]
+    },
+    {
+      "parameters": { "url": "https://g1.globo.com/rss/g1/tecnologia/", "options": {} },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "RSS G1 Tecnologia",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [460, 440]
+    },
+    {
+      "parameters": { "url": "https://canaltech.com.br/rss/", "options": {} },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "RSS Canaltech",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [460, 600]
+    },
+    {
+      "parameters": {
+        "action": "hash",
+        "type": "SHA256",
+        "value": "={{ $json.title }}{{ $json.link }}",
+        "dataPropertyName": "hash",
+        "encoding": "hex"
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "Gerar Hash",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [760, 360]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT IGNORE INTO noticias_publicadas (titulo, url_original, hash, status, data_coleta) VALUES ($1, $2, $3, 'fila', NOW())",
+        "options": {
+          "queryReplacement": "={{ [$json.title, $json.link, $json.hash] }}"
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Inserir na Fila",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [1040, 360]
+    }
+  ],
+  "connections": {
+    "Schedule 15min": {
+      "main": [[
+        { "node": "RSS Google News", "type": "main", "index": 0 },
+        { "node": "RSS TechCrunch", "type": "main", "index": 0 },
+        { "node": "RSS G1 Tecnologia", "type": "main", "index": 0 },
+        { "node": "RSS Canaltech", "type": "main", "index": 0 }
+      ]]
+    },
+    "RSS Google News":   { "main": [[{ "node": "Gerar Hash", "type": "main", "index": 0 }]] },
+    "RSS TechCrunch":    { "main": [[{ "node": "Gerar Hash", "type": "main", "index": 0 }]] },
+    "RSS G1 Tecnologia": { "main": [[{ "node": "Gerar Hash", "type": "main", "index": 0 }]] },
+    "RSS Canaltech":     { "main": [[{ "node": "Gerar Hash", "type": "main", "index": 0 }]] },
+    "Gerar Hash":        { "main": [[{ "node": "Inserir na Fila", "type": "main", "index": 0 }]] }
+  }
+}

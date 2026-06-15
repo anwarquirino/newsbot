@@ -1,0 +1,178 @@
+{
+  "name": "Fluxo 3 — Monitor de Tendências",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "c3000000-0000-4000-8000-000000000001",
+      "name": "Schedule Hourly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://trends.google.com/trending/rss?geo=BR",
+        "options": {}
+      },
+      "id": "c3000000-0000-4000-8000-000000000002",
+      "name": "Google Trends BR",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        460,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Pegar os top 5 trending topics\nreturn $input.all().slice(0, 5).map(item => ({\n  json: {\n    trending_topic: item.json.title,\n    searches: item.json['ht:approx_traffic'] || item.json.approx_traffic || 'N/A',\n    link: item.json.link || ''\n  }\n}));"
+      },
+      "id": "c3000000-0000-4000-8000-000000000003",
+      "name": "Top 5 Trends",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: \"llama-3.3-70b-versatile\", temperature: 0.8, max_tokens: 800, response_format: { type: \"json_object\" }, messages: [ { role: \"system\", content: \"Você é um editor de um portal de notícias de tecnologia brasileiro. Responda sempre em JSON válido.\" }, { role: \"user\", content: \"Com base no trending topic \\\"\" + $json.trending_topic + \"\\\" (volume de buscas: \" + $json.searches + \"), gere uma pauta jornalística relevante e interessante. Responda APENAS com JSON válido, sem texto extra: {\\\"titulo\\\":\\\"titulo jornalistico\\\",\\\"angulo\\\":\\\"angulo editorial\\\",\\\"pontos_principais\\\":[\\\"a\\\",\\\"b\\\",\\\"c\\\"],\\\"relevante\\\":true}\" } ] }) }}",
+        "options": {}
+      },
+      "id": "c3000000-0000-4000-8000-000000000004",
+      "name": "IA Gerar Pauta (Groq)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        360
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "openAiApi": {
+          "id": "gM1FLFs40o5eDfhe",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "function extractPauta(obj){\n  if(obj==null) return null;\n  const cands=[obj, obj.choices&&obj.choices[0]&&obj.choices[0].message&&obj.choices[0].message.content, obj.message&&obj.message.content, obj.content, obj.output, obj.text];\n  for(let c of cands){\n    if(c==null) continue;\n    if(typeof c==='string'){ try{ c=JSON.parse(c.replace(/```json|```/g,'').trim()); }catch(e){ continue; } }\n    if(c&&typeof c==='object'&&('relevante' in c||'titulo' in c)) return c;\n  }\n  return null;\n}\nconst trends=$('Top 5 Trends').all();\nconst inputs=$input.all();\nconst results=[];\nfor(let i=0;i<inputs.length;i++){\n  const pauta=extractPauta(inputs[i].json);\n  if(pauta&&pauta.relevante!==false&&pauta.titulo){\n    results.push({json:{pauta, trending_topic:(trends[i]&&trends[i].json.trending_topic)||''}});\n  }\n}\nreturn results;"
+      },
+      "id": "c3000000-0000-4000-8000-000000000005",
+      "name": "Filtrar Relevante",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO noticias_publicadas (titulo, url_original, hash, status, fonte, source_topic, data_coleta) VALUES ($1, $2, SHA2(CONCAT('trend_', NOW(), $3), 256), $4, $5, $6, NOW())",
+        "options": {
+          "queryReplacement": "={{ [$json.pauta.titulo, 'google-trends://trend', $json.trending_topic, 'fila', 'Google Trends', $json.trending_topic] }}"
+        }
+      },
+      "id": "c3000000-0000-4000-8000-000000000006",
+      "name": "Inserir na Fila (Prioritário)",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1400,
+        360
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Hourly": {
+      "main": [
+        [
+          {
+            "node": "Google Trends BR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Trends BR": {
+      "main": [
+        [
+          {
+            "node": "Top 5 Trends",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Top 5 Trends": {
+      "main": [
+        [
+          {
+            "node": "IA Gerar Pauta (Groq)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Gerar Pauta (Groq)": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Relevante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Relevante": {
+      "main": [
+        [
+          {
+            "node": "Inserir na Fila (Prioritário)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

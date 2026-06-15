@@ -1,0 +1,199 @@
+{
+  "name": "Fluxo 2 — Reescrita (Groq, sem imagem/WP)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000001",
+      "name": "Schedule 5min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, titulo, url_original FROM noticias_publicadas WHERE status = 'fila' ORDER BY data_coleta ASC LIMIT 1",
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000002",
+      "name": "Buscar da Fila",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        460,
+        360
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "BweaSR6vrmSthCvB",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE noticias_publicadas SET status = 'processando' WHERE id = $1",
+        "options": {
+          "queryReplacement": "={{ [$json.id] }}"
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000003",
+      "name": "Marcar Processando",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        680,
+        360
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "BweaSR6vrmSthCvB",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: \"llama-3.3-70b-versatile\", temperature: 0.6, max_tokens: 2000, response_format: { type: \"json_object\" }, messages: [ { role: \"system\", content: \"Você é um jornalista de tecnologia brasileiro. Reescreva a notícia de forma original, clara, envolvente e otimizada para SEO. Responda sempre em JSON válido.\" }, { role: \"user\", content: \"Reescreva a notícia abaixo como um artigo jornalístico original em português do Brasil. Responda APENAS com JSON válido, sem texto extra: {\\\"titulo\\\":\\\"título atrativo e otimizado para SEO\\\",\\\"conteudo\\\":\\\"corpo do artigo com 500-800 palavras em HTML simples (use <p>, <h2>)\\\",\\\"resumo\\\":\\\"resumo de ate 160 caracteres\\\",\\\"tags\\\":[\\\"tag1\\\",\\\"tag2\\\",\\\"tag3\\\"],\\\"categoria\\\":\\\"Tecnologia\\\"}\\n\\nTítulo original: \" + $('Buscar da Fila').item.json.titulo + \"\\nFonte (URL): \" + $('Buscar da Fila').item.json.url_original } ] }) }}",
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000004",
+      "name": "IA Reescrever",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        360
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "openAiApi": {
+          "id": "gM1FLFs40o5eDfhe",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "function extract(obj){\n  if(obj==null) return null;\n  const cands=[obj, obj.choices&&obj.choices[0]&&obj.choices[0].message&&obj.choices[0].message.content, obj.message&&obj.message.content, obj.content, obj.text];\n  for(let c of cands){\n    if(c==null) continue;\n    if(typeof c==='string'){ try{ c=JSON.parse(c.replace(/```json|```/g,'').trim()); }catch(e){ continue; } }\n    if(c&&typeof c==='object'&&('conteudo' in c||'titulo' in c)) return c;\n  }\n  return null;\n}\nconst art=extract($input.first().json);\nif(!art||!art.titulo){ throw new Error('Nao consegui parsear o artigo retornado pela IA'); }\nconst tags=Array.isArray(art.tags)?art.tags.join(', '):(art.tags||'');\nreturn [{ json: { id: $('Buscar da Fila').item.json.id, artigo: { titulo: art.titulo||'', conteudo: art.conteudo||'', resumo: (art.resumo||'').slice(0,160), categoria: art.categoria||'Tecnologia', tags } } }];"
+      },
+      "id": "b2000000-0000-4000-8000-000000000005",
+      "name": "Parse Artigo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE noticias_publicadas SET titulo = $1, conteudo_reescrito = $2, resumo = $3, tags = $4, categoria = $5, status = 'pronto', data_publicacao = NOW(), processed_at = NOW() WHERE id = $6",
+        "options": {
+          "queryReplacement": "={{ [$json.artigo.titulo, $json.artigo.conteudo, $json.artigo.resumo, $json.artigo.tags, $json.artigo.categoria, $json.id] }}"
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000006",
+      "name": "Salvar Artigo (pronto)",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1340,
+        360
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "BweaSR6vrmSthCvB",
+          "name": "MySQL account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule 5min": {
+      "main": [
+        [
+          {
+            "node": "Buscar da Fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar da Fila": {
+      "main": [
+        [
+          {
+            "node": "Marcar Processando",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar Processando": {
+      "main": [
+        [
+          {
+            "node": "IA Reescrever",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Reescrever": {
+      "main": [
+        [
+          {
+            "node": "Parse Artigo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Artigo": {
+      "main": [
+        [
+          {
+            "node": "Salvar Artigo (pronto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
