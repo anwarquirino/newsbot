@@ -131,7 +131,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ title: $json.artigo.titulo, content: $json.artigo.conteudo, excerpt: $json.artigo.resumo, status: \"publish\" }) }}",
+        "jsonBody": "={{ JSON.stringify({ title: $json.artigo.titulo, content: $json.artigo.conteudo, excerpt: $json.artigo.resumo, status: \"publish\", categories: [3] }) }}",
         "options": {
           "allowUnauthorizedCerts": true
         }
