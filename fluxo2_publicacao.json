@@ -153,7 +153,7 @@
         "operation": "executeQuery",
         "query": "UPDATE noticias_publicadas SET titulo = $1, conteudo_reescrito = $2, resumo = $3, tags = $4, categoria = $5, status = 'publicado', post_id_wp = $6, data_publicacao = NOW(), processed_at = NOW() WHERE id = $7",
         "options": {
-          "queryReplacement": "={{ [$('Parse Artigo').item.json.artigo.titulo, $('Parse Artigo').item.json.artigo.conteudo, $('Parse Artigo').item.json.artigo.resumo, $('Parse Artigo').item.json.artigo.tags, $('Parse Artigo').item.json.artigo.categoria, $json.id, $('Parse Artigo').item.json.id] }}"
+          "queryReplacement": "={{ [$('Parse Artigo').item.json.artigo.titulo, $('Parse Artigo').item.json.artigo.conteudo, $('Parse Artigo').item.json.artigo.resumo, $('Parse Artigo').item.json.artigo.tags, $('Parse Artigo').item.json.artigo.categoria, $('Publicar WP').item.json.id, $('Parse Artigo').item.json.id] }}"
         }
       },
       "id": "b2000000-0000-4000-8000-000000000008",
@@ -170,6 +170,131 @@
           "name": "MySQL account"
         }
       }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.pexels.com/v1/search?query=technology&per_page=80&orientation=landscape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $env.PEXELS_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000010",
+      "name": "Buscar Foto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        540
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.photos[Math.floor(Math.random()*$json.photos.length)].src.large }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000011",
+      "name": "Baixar Foto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        540
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://newsbot.local/wp-json/wp/v2/media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Basic \" + $env.WP_AUTH }}"
+            },
+            {
+              "name": "Content-Disposition",
+              "value": "=attachment; filename=\"post-{{ $('Publicar WP').item.json.id }}.jpg\""
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000012",
+      "name": "Upload Midia WP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        540
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://newsbot.local/wp-json/wp/v2/posts/{{ $('Publicar WP').item.json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Basic \" + $env.WP_AUTH }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ featured_media: $json.id }) }}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000013",
+      "name": "Definir Destacada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2220,
+        540
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -229,6 +354,50 @@
       ]
     },
     "Publicar WP": {
+      "main": [
+        [
+          {
+            "node": "Buscar Foto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Foto": {
+      "main": [
+        [
+          {
+            "node": "Baixar Foto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixar Foto": {
+      "main": [
+        [
+          {
+            "node": "Upload Midia WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Midia WP": {
+      "main": [
+        [
+          {
+            "node": "Definir Destacada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Destacada": {
       "main": [
         [
           {
