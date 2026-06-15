@@ -1,5 +1,5 @@
 {
-  "name": "Fluxo 2 — Reescrita (Groq, sem imagem/WP)",
+  "name": "Fluxo 2 — Reescrita e Publicação (Groq + WordPress)",
   "active": false,
   "settings": {
     "executionOrder": "v1"
@@ -117,18 +117,51 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "UPDATE noticias_publicadas SET titulo = $1, conteudo_reescrito = $2, resumo = $3, tags = $4, categoria = $5, status = 'pronto', data_publicacao = NOW(), processed_at = NOW() WHERE id = $6",
+        "method": "POST",
+        "url": "https://newsbot.local/wp-json/wp/v2/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Basic {{ $env.WP_AUTH }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.artigo.titulo, content: $json.artigo.conteudo, excerpt: $json.artigo.resumo, status: \"publish\" }) }}",
         "options": {
-          "queryReplacement": "={{ [$json.artigo.titulo, $json.artigo.conteudo, $json.artigo.resumo, $json.artigo.tags, $json.artigo.categoria, $json.id] }}"
+          "allowUnauthorizedCerts": true
         }
       },
-      "id": "b2000000-0000-4000-8000-000000000006",
-      "name": "Salvar Artigo (pronto)",
+      "id": "b2000000-0000-4000-8000-000000000007",
+      "name": "Publicar WP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        360
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE noticias_publicadas SET titulo = $1, conteudo_reescrito = $2, resumo = $3, tags = $4, categoria = $5, status = 'publicado', post_id_wp = $6, data_publicacao = NOW(), processed_at = NOW() WHERE id = $7",
+        "options": {
+          "queryReplacement": "={{ [$('Parse Artigo').item.json.artigo.titulo, $('Parse Artigo').item.json.artigo.conteudo, $('Parse Artigo').item.json.artigo.resumo, $('Parse Artigo').item.json.artigo.tags, $('Parse Artigo').item.json.artigo.categoria, $json.id, $('Parse Artigo').item.json.id] }}"
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000008",
+      "name": "Marcar Publicado",
       "type": "n8n-nodes-base.mySql",
       "typeVersion": 2.5,
       "position": [
-        1340,
+        1560,
         360
       ],
       "credentials": {
@@ -188,7 +221,18 @@
       "main": [
         [
           {
-            "node": "Salvar Artigo (pronto)",
+            "node": "Publicar WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publicar WP": {
+      "main": [
+        [
+          {
+            "node": "Marcar Publicado",
             "type": "main",
             "index": 0
           }
