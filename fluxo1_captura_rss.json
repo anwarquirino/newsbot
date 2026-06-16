@@ -114,7 +114,13 @@
       "position": [
         1040,
         360
-      ]
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "BweaSR6vrmSthCvB",
+          "name": "MySQL account"
+        }
+      }
     }
   ],
   "connections": {
