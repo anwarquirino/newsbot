@@ -29,7 +29,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, titulo, url_original FROM noticias_publicadas WHERE status = 'fila' ORDER BY data_coleta ASC LIMIT 1",
+        "query": "SELECT id, titulo, url_original, resumo_fonte FROM noticias_publicadas WHERE status = 'fila' ORDER BY data_coleta ASC LIMIT 1",
         "options": {}
       },
       "id": "b2000000-0000-4000-8000-000000000002",
@@ -79,7 +79,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: \"llama-3.3-70b-versatile\", temperature: 0.6, max_tokens: 2000, response_format: { type: \"json_object\" }, messages: [ { role: \"system\", content: \"Você é um jornalista de tecnologia brasileiro. Reescreva a notícia de forma original, clara, envolvente e otimizada para SEO. Responda sempre em JSON válido.\" }, { role: \"user\", content: \"Reescreva a notícia abaixo como um artigo jornalístico original em português do Brasil. Responda APENAS com JSON válido, sem texto extra: {\\\"titulo\\\":\\\"título atrativo e otimizado para SEO\\\",\\\"conteudo\\\":\\\"corpo do artigo com 500-800 palavras em HTML simples (use <p>, <h2>)\\\",\\\"resumo\\\":\\\"resumo de ate 160 caracteres\\\",\\\"tags\\\":[\\\"tag1\\\",\\\"tag2\\\",\\\"tag3\\\"],\\\"categoria\\\":\\\"Tecnologia\\\"}\\n\\nTítulo original: \" + $('Buscar da Fila').item.json.titulo + \"\\nFonte (URL): \" + $('Buscar da Fila').item.json.url_original } ] }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: \"llama-3.3-70b-versatile\", temperature: 0.5, max_tokens: 2000, response_format: { type: \"json_object\" }, messages: [ { role: \"system\", content: \"Você é um jornalista de tecnologia brasileiro. Escreva um artigo claro e factual baseado APENAS nas informações fornecidas (título e resumo da fonte). NÃO invente dados, números, nomes próprios, datas, citações ou fatos que não estejam no material. Se a informação for insuficiente, escreva um texto mais curto e genérico, sem fabricar detalhes. Responda sempre em JSON válido.\" }, { role: \"user\", content: \"Com base no título e no resumo da fonte abaixo, escreva um artigo jornalístico original em português do Brasil, fiel à informação e sem inventar fatos. Responda APENAS com JSON válido, sem texto extra: {\\\"titulo\\\":\\\"título atrativo e fiel\\\",\\\"conteudo\\\":\\\"corpo em HTML simples 300-700 palavras (use <p>, <h2>)\\\",\\\"resumo\\\":\\\"resumo de ate 160 caracteres\\\",\\\"tags\\\":[\\\"tag1\\\",\\\"tag2\\\",\\\"tag3\\\"],\\\"categoria\\\":\\\"Tecnologia\\\"}\\n\\nTítulo: \" + $('Buscar da Fila').item.json.titulo + \"\\nResumo da fonte: \" + ($('Buscar da Fila').item.json.resumo_fonte || \"(sem resumo disponível; seja breve e não invente dados)\") } ] }) }}",
         "options": {}
       },
       "id": "b2000000-0000-4000-8000-000000000004",
