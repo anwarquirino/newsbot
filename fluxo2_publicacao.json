@@ -29,7 +29,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, titulo, url_original, resumo_fonte FROM noticias_publicadas WHERE status = 'fila' ORDER BY data_coleta ASC LIMIT 1",
+        "query": "SELECT id, titulo, url_original, resumo_fonte, categoria_wp FROM noticias_publicadas WHERE status = 'fila' ORDER BY data_coleta ASC LIMIT 1",
         "options": {}
       },
       "id": "b2000000-0000-4000-8000-000000000002",
@@ -131,7 +131,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ title: $json.artigo.titulo, content: $json.artigo.conteudo, excerpt: $json.artigo.resumo, status: \"publish\", categories: [3] }) }}",
+        "jsonBody": "={{ JSON.stringify({ title: $json.artigo.titulo, content: $json.artigo.conteudo, excerpt: $json.artigo.resumo, status: \"publish\", categories: [ $(\"Buscar da Fila\").item.json.categoria_wp || 3 ] }) }}",
         "options": {
           "allowUnauthorizedCerts": true
         }

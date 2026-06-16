@@ -1,6 +1,6 @@
 {
   "name": "Fluxo 1 — Captura RSS",
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },
@@ -22,64 +22,8 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        240,
-        360
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://news.google.com/rss/search?q=tecnologia&hl=pt-BR&gl=BR&ceid=BR:pt-419",
-        "options": {}
-      },
-      "id": "a1000000-0000-4000-8000-000000000002",
-      "name": "RSS Google News",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1.2,
-      "position": [
-        460,
-        120
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://techcrunch.com/feed/",
-        "options": {}
-      },
-      "id": "a1000000-0000-4000-8000-000000000003",
-      "name": "RSS TechCrunch",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1.2,
-      "position": [
-        460,
-        280
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://g1.globo.com/rss/g1/tecnologia/",
-        "options": {}
-      },
-      "id": "a1000000-0000-4000-8000-000000000004",
-      "name": "RSS G1 Tecnologia",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1.2,
-      "position": [
-        460,
-        440
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://canaltech.com.br/rss/",
-        "options": {}
-      },
-      "id": "a1000000-0000-4000-8000-000000000005",
-      "name": "RSS Canaltech",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1.2,
-      "position": [
-        460,
-        600
+        120,
+        400
       ]
     },
     {
@@ -90,30 +34,30 @@
         "dataPropertyName": "hash",
         "encoding": "hex"
       },
-      "id": "a1000000-0000-4000-8000-000000000006",
+      "id": "a1000000-0000-4000-8000-000000000002",
       "name": "Gerar Hash",
       "type": "n8n-nodes-base.crypto",
       "typeVersion": 1,
       "position": [
-        760,
-        360
+        1100,
+        400
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT IGNORE INTO noticias_publicadas (titulo, url_original, hash, resumo_fonte, status, data_coleta) VALUES ($1, $2, $3, $4, 'fila', NOW())",
+        "query": "INSERT IGNORE INTO noticias_publicadas (titulo, url_original, hash, resumo_fonte, categoria_wp, status, data_coleta) VALUES ($1, $2, $3, $4, $5, 'fila', NOW())",
         "options": {
-          "queryReplacement": "={{ [$json.title, $json.link, $json.hash, ($json.contentSnippet || $json.content || '')] }}"
+          "queryReplacement": "={{ [$json.title, $json.link, $json.hash, ($json.contentSnippet || $json.content || ''), ($json.categoria_wp || 3)] }}"
         }
       },
-      "id": "a1000000-0000-4000-8000-000000000007",
+      "id": "a1000000-0000-4000-8000-000000000003",
       "name": "Inserir na Fila",
       "type": "n8n-nodes-base.mySql",
       "typeVersion": 2.5,
       "position": [
-        1040,
-        360
+        1320,
+        400
       ],
       "credentials": {
         "mySql": {
@@ -121,6 +65,267 @@
           "name": "MySQL account"
         }
       }
+    },
+    {
+      "parameters": {
+        "url": "https://techcrunch.com/feed/",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "RSS TechCrunch",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return $input.all().map(it=>({ json: { ...it.json, categoria_wp: 3 } }));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Cat RSS TechCrunch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://canaltech.com.br/rss/",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "RSS Canaltech",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return $input.all().map(it=>({ json: { ...it.json, categoria_wp: 3 } }));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Cat RSS Canaltech",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=tecnologia&hl=pt-BR&gl=BR&ceid=BR:pt-419",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "GN Tecnologia",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return $input.all().map(it=>({ json: { ...it.json, categoria_wp: 3 } }));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Cat GN Tecnologia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=sa%C3%BAde&hl=pt-BR&gl=BR&ceid=BR:pt-419",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000010",
+      "name": "GN Saude",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return $input.all().map(it=>({ json: { ...it.json, categoria_wp: 6 } }));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000011",
+      "name": "Cat GN Saude",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=neg%C3%B3cios%20OR%20economia%20OR%20gest%C3%A3o&hl=pt-BR&gl=BR&ceid=BR:pt-419",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000012",
+      "name": "GN Negocios",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return $input.all().map(it=>({ json: { ...it.json, categoria_wp: 7 } }));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000013",
+      "name": "Cat GN Negocios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=engenharia%20OR%20arquitetura&hl=pt-BR&gl=BR&ceid=BR:pt-419",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000014",
+      "name": "GN Engenharia",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return $input.all().map(it=>({ json: { ...it.json, categoria_wp: 8 } }));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000015",
+      "name": "Cat GN Engenharia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=direito%20OR%20jur%C3%ADdico&hl=pt-BR&gl=BR&ceid=BR:pt-419",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000016",
+      "name": "GN Direito",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return $input.all().map(it=>({ json: { ...it.json, categoria_wp: 9 } }));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000017",
+      "name": "Cat GN Direito",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=educa%C3%A7%C3%A3o&hl=pt-BR&gl=BR&ceid=BR:pt-419",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000018",
+      "name": "GN Educacao",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return $input.all().map(it=>({ json: { ...it.json, categoria_wp: 10 } }));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000019",
+      "name": "Cat GN Educacao",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=gastronomia%20OR%20culin%C3%A1ria&hl=pt-BR&gl=BR&ceid=BR:pt-419",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000020",
+      "name": "GN Gastronomia",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        1080
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return $input.all().map(it=>({ json: { ...it.json, categoria_wp: 11 } }));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000021",
+      "name": "Cat GN Gastronomia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        1080
+      ]
     }
   ],
   "connections": {
@@ -128,17 +333,7 @@
       "main": [
         [
           {
-            "node": "RSS Google News",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "RSS TechCrunch",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "RSS G1 Tecnologia",
             "type": "main",
             "index": 0
           },
@@ -146,15 +341,50 @@
             "node": "RSS Canaltech",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "GN Tecnologia",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GN Saude",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GN Negocios",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GN Engenharia",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GN Direito",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GN Educacao",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GN Gastronomia",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
     },
-    "RSS Google News": {
+    "Gerar Hash": {
       "main": [
         [
           {
-            "node": "Gerar Hash",
+            "node": "Inserir na Fila",
             "type": "main",
             "index": 0
           }
@@ -165,14 +395,14 @@
       "main": [
         [
           {
-            "node": "Gerar Hash",
+            "node": "Cat RSS TechCrunch",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "RSS G1 Tecnologia": {
+    "Cat RSS TechCrunch": {
       "main": [
         [
           {
@@ -187,6 +417,17 @@
       "main": [
         [
           {
+            "node": "Cat RSS Canaltech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cat RSS Canaltech": {
+      "main": [
+        [
+          {
             "node": "Gerar Hash",
             "type": "main",
             "index": 0
@@ -194,11 +435,154 @@
         ]
       ]
     },
-    "Gerar Hash": {
+    "GN Tecnologia": {
       "main": [
         [
           {
-            "node": "Inserir na Fila",
+            "node": "Cat GN Tecnologia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cat GN Tecnologia": {
+      "main": [
+        [
+          {
+            "node": "Gerar Hash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GN Saude": {
+      "main": [
+        [
+          {
+            "node": "Cat GN Saude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cat GN Saude": {
+      "main": [
+        [
+          {
+            "node": "Gerar Hash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GN Negocios": {
+      "main": [
+        [
+          {
+            "node": "Cat GN Negocios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cat GN Negocios": {
+      "main": [
+        [
+          {
+            "node": "Gerar Hash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GN Engenharia": {
+      "main": [
+        [
+          {
+            "node": "Cat GN Engenharia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cat GN Engenharia": {
+      "main": [
+        [
+          {
+            "node": "Gerar Hash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GN Direito": {
+      "main": [
+        [
+          {
+            "node": "Cat GN Direito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cat GN Direito": {
+      "main": [
+        [
+          {
+            "node": "Gerar Hash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GN Educacao": {
+      "main": [
+        [
+          {
+            "node": "Cat GN Educacao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cat GN Educacao": {
+      "main": [
+        [
+          {
+            "node": "Gerar Hash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GN Gastronomia": {
+      "main": [
+        [
+          {
+            "node": "Cat GN Gastronomia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cat GN Gastronomia": {
+      "main": [
+        [
+          {
+            "node": "Gerar Hash",
             "type": "main",
             "index": 0
           }
