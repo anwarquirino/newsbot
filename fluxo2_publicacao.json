@@ -29,7 +29,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, titulo, url_original, resumo_fonte, categoria_wp FROM noticias_publicadas WHERE status = 'fila' ORDER BY data_coleta ASC LIMIT 1",
+        "query": "SELECT id, titulo, url_original, resumo_fonte, categoria_wp FROM noticias_publicadas WHERE status = 'fila' ORDER BY RAND() LIMIT 1",
         "options": {}
       },
       "id": "b2000000-0000-4000-8000-000000000002",
