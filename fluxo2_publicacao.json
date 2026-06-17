@@ -174,7 +174,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "https://api.pexels.com/v1/search?query=technology&per_page=80&orientation=landscape",
+        "url": "=https://api.pexels.com/v1/search?per_page=60&orientation=landscape&query={{ encodeURIComponent(({\"3\":\"technology computer\",\"6\":\"health medicine hospital\",\"7\":\"business office finance\",\"8\":\"engineering architecture construction\",\"9\":\"law justice court\",\"10\":\"education classroom students\",\"11\":\"food gastronomy cuisine\"})[String($('Buscar da Fila').item.json.categoria_wp)] || 'news brazil') }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
