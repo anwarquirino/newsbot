@@ -1,4 +1,4 @@
-# 📰 NewsBot — Portal de Notícias de Tecnologia Automatizado
+# NewsBot — Portal de Notícias de Tecnologia Automatizado
 
 Sistema que **captura notícias e tendências, reescreve com IA e prepara artigos prontos para publicação** — totalmente automatizado via [n8n](https://n8n.io), com **custo de operação R$ 0** usando a IA gratuita da [Groq](https://groq.com).
 
@@ -6,7 +6,7 @@ Sistema que **captura notícias e tendências, reescreve com IA e prepara artigo
 
 ---
 
-## 🏗️ Arquitetura
+## Arquitetura
 
 ```
                 ┌─────────────────────────────────────────────┐
@@ -29,7 +29,7 @@ Sistema que **captura notícias e tendências, reescreve com IA e prepara artigo
 
 ---
 
-## 🔁 Os fluxos
+## Os fluxos
 
 ### Fluxo 1 — Captura RSS (`fluxo1_captura_rss.json`)
 A cada 15 min, lê 4 feeds RSS (Google News, TechCrunch, G1 Tecnologia, Canaltech), gera um hash SHA-256 de cada notícia e insere na fila. Duplicatas são ignoradas automaticamente via `INSERT IGNORE` + índice `UNIQUE(hash)`.
@@ -42,7 +42,7 @@ A cada hora, lê o Google Trends BR, pega os 5 principais, e usa a Groq para ger
 
 ---
 
-## 🗄️ Banco de dados
+## Banco de dados
 
 Tabela principal `noticias_publicadas` (fila + artigos). Schema base em [`newsbot_schema.sql`](newsbot_schema.sql); índices, tabelas de apoio (`rss_feeds`, `fluxo_execucoes`, `analytics_daily`), a view `vw_dashboard_realtime` e a procedure `ResetarItensTravados()` em [`otimizacoes_sql_prontas.sql`](otimizacoes_sql_prontas.sql).
 
@@ -52,7 +52,7 @@ Todas as queries do n8n usam **prepared statements** (`$1, $2...` + `queryReplac
 
 ---
 
-## 🚀 Setup (Windows)
+## Setup (Windows)
 
 ### Pré-requisitos
 - [MySQL](https://dev.mysql.com/downloads/) 8+ (testado no 9.7)
@@ -93,7 +93,7 @@ Rode cada fluxo manualmente (**Execute Workflow**) para testar, ou ative o toggl
 
 ---
 
-## 📁 Estrutura do projeto
+## Estrutura do projeto
 
 ```
 .
@@ -107,7 +107,7 @@ Rode cada fluxo manualmente (**Execute Workflow**) para testar, ou ative o toggl
 
 ---
 
-## 💰 Custo
+## Custo
 
 | Item | Custo |
 |---|---|
@@ -118,7 +118,7 @@ Rode cada fluxo manualmente (**Execute Workflow**) para testar, ou ative o toggl
 
 ---
 
-## 🔜 Roadmap
+## Roadmap
 
 - [ ] Publicação automática no WordPress (status `pronto` → `publicado`)
 - [ ] Geração/seleção de imagem destacada (ex.: Pexels/Unsplash grátis)
@@ -128,7 +128,7 @@ Rode cada fluxo manualmente (**Execute Workflow**) para testar, ou ative o toggl
 
 ---
 
-## 🔐 Segurança
+## Segurança
 
 - **Nunca** faça commit de chaves de API. A chave da Groq fica fora do versionamento (veja `.gitignore`).
 - As credenciais ficam armazenadas no banco interno do n8n (`~/.n8n`), não no repositório.
