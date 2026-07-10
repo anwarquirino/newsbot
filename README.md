@@ -1,41 +1,44 @@
 # NewsBot — Portal de Notícias de Tecnologia Automatizado
 
-Sistema que **captura notícias e tendências, reescreve com IA e prepara artigos prontos para publicação** — totalmente automatizado via [n8n](https://n8n.io), com **custo de operação R$ 0** usando a IA gratuita da [Groq](https://groq.com).
+Sistema que **captura notícias e tendências, reescreve com IA e publica automaticamente no WordPress com imagem destacada** — totalmente automatizado via [n8n](https://n8n.io), com **custo de operação R$ 0** usando a IA gratuita da [Groq](https://groq.com) e imagens gratuitas do [Pexels](https://www.pexels.com).
 
-> Status atual: capturando notícias (RSS), monitorando tendências (Google Trends) e reescrevendo artigos com IA. Publicação no WordPress e geração de imagens estão no roadmap.
+> Status atual: pipeline completo funcionando — captura de 9 feeds RSS em 7 áreas, monitoramento do Google Trends, reescrita com IA, publicação automática no WordPress (self-hosted) e imagem destacada via Pexels.
 
 ---
 
 ## Arquitetura
 
 ```
-                ┌─────────────────────────────────────────────┐
-                │                  n8n                         │
-                │                                              │
-  RSS Feeds ───►│  Fluxo 1: Captura RSS ──────┐                │
-                │                              ▼                │
-  Google ──────►│  Fluxo 3: Tendências ───► [ MySQL: fila ]    │
-  Trends        │                              │                │
-                │                              ▼                │
-                │  Fluxo 2: Reescrita IA (Groq) ─► [ pronto ]   │
-                └─────────────────────────────────────────────┘
+                ┌──────────────────────────────────────────────────┐
+                │                       n8n                        │
+                │                                                  │
+  RSS Feeds ───►│  Fluxo 1: Captura RSS ──────┐                    │
+                │                             ▼                    │
+  Google ──────►│  Fluxo 3: Tendências ──► [ MySQL: fila ]         │
+  Trends        │                             │                    │
+                │                             ▼                    │
+                │  Fluxo 2: Reescrita IA (Groq)                    │
+                │      └─► imagem (Pexels) ─► WordPress REST API   │
+                └──────────────────────────────────────────────────┘
 ```
 
 | Componente | Papel |
 |---|---|
 | **n8n** | Orquestração dos fluxos (cron, HTTP, banco) |
-| **MySQL** | Fila de notícias, deduplicação, artigos prontos, analytics |
-| **Groq** (llama-3.3-70b) | Reescrita de artigos e geração de pautas — **gratuito** |
+| **MySQL** | Fila de notícias, deduplicação, artigos publicados, analytics |
+| **Groq** (llama-3.1-8b reescrita · llama-3.3-70b pautas) | Reescrita de artigos e geração de pautas — **gratuito** |
+| **WordPress** (self-hosted) | Publicação automática via REST API (`wp/v2/posts` e `wp/v2/media`) |
+| **Pexels** | Busca gratuita de imagem destacada por categoria |
 
 ---
 
 ## Os fluxos
 
 ### Fluxo 1 — Captura RSS (`fluxo1_captura_rss.json`)
-A cada 15 min, lê 4 feeds RSS (Google News, TechCrunch, G1 Tecnologia, Canaltech), gera um hash SHA-256 de cada notícia e insere na fila. Duplicatas são ignoradas automaticamente via `INSERT IGNORE` + índice `UNIQUE(hash)`.
+A cada 15 min, lê 9 feeds RSS (TechCrunch, Canaltech e 7 buscas do Google News por área: Tecnologia, Saúde, Negócios, Engenharia, Direito, Educação e Gastronomia), gera um hash SHA-256 de cada notícia e insere na fila com a categoria WordPress da área. Duplicatas são ignoradas automaticamente via `INSERT IGNORE` + índice `UNIQUE(hash)`.
 
-### Fluxo 2 — Reescrita com IA (`fluxo2_publicacao.json`)
-A cada 5 min, pega o próximo item `fila`, marca como `processando`, envia para a Groq reescrever (título SEO + corpo HTML 500-800 palavras + resumo + tags + categoria) e salva o artigo com status `pronto`.
+### Fluxo 2 — Reescrita com IA e publicação (`fluxo2_publicacao.json`)
+A cada 5 min, pega o próximo item `fila`, marca como `processando`, envia para a Groq reescrever (título SEO + corpo HTML 500-800 palavras + resumo + tags + categoria), publica o post no WordPress via REST API, busca uma imagem no Pexels de acordo com a categoria, envia para a mídia do WordPress e a vincula como imagem destacada. Ao final, salva o artigo com status `publicado`. Erros na cadeia de imagem não bloqueiam a publicação (continue-on-error).
 
 ### Fluxo 3 — Monitor de Tendências (`fluxo3_tendencias.json`)
 A cada hora, lê o Google Trends BR, pega os 5 principais, e usa a Groq para gerar pautas jornalísticas relevantes, inserindo-as na fila com `fonte = 'Google Trends'`.
@@ -46,7 +49,7 @@ A cada hora, lê o Google Trends BR, pega os 5 principais, e usa a Groq para ger
 
 Tabela principal `noticias_publicadas` (fila + artigos). Schema base em [`newsbot_schema.sql`](newsbot_schema.sql); índices, tabelas de apoio (`rss_feeds`, `fluxo_execucoes`, `analytics_daily`), a view `vw_dashboard_realtime` e a procedure `ResetarItensTravados()` em [`otimizacoes_sql_prontas.sql`](otimizacoes_sql_prontas.sql).
 
-Status de uma notícia: `fila` → `processando` → `pronto` (→ `publicado` quando houver WordPress) ou `erro`.
+Status de uma notícia: `fila` → `processando` → `publicado` ou `erro`.
 
 Todas as queries do n8n usam **prepared statements** (`$1, $2...` + `queryReplacement`) — sem risco de SQL injection.
 
@@ -58,6 +61,8 @@ Todas as queries do n8n usam **prepared statements** (`$1, $2...` + `queryReplac
 - [MySQL](https://dev.mysql.com/downloads/) 8+ (testado no 9.7)
 - [Node.js](https://nodejs.org) 20+ (para o n8n)
 - Uma API key gratuita da [Groq](https://console.groq.com/keys)
+- Um WordPress self-hosted (os fluxos usam `https://newsbot.local` — ajuste a URL nos nós HTTP para a sua instância)
+- Uma API key gratuita do [Pexels](https://www.pexels.com/api/) (para a imagem destacada)
 
 ### 1. Banco de dados
 ```powershell
@@ -88,6 +93,13 @@ No n8n: **Create Workflow → menu ⋯ → Import from File**, e importe os trê
 
 > A Groq é compatível com a API da OpenAI, por isso usamos a credencial "OpenAI" apontando a Base URL para o Groq.
 
+Além das credenciais, o fluxo 2 lê duas variáveis de ambiente (defina antes de iniciar o n8n):
+
+| Variável | Conteúdo |
+|---|---|
+| `WP_AUTH` | Valor do header `Authorization` do WordPress (ex.: `Basic <base64 usuário:senha-de-aplicativo>`) |
+| `PEXELS_KEY` | Sua API key do Pexels |
+
 ### 5. Executar
 Rode cada fluxo manualmente (**Execute Workflow**) para testar, ou ative o toggle **Active** para rodar no agendamento. O n8n precisa permanecer em execução.
 
@@ -113,15 +125,17 @@ Rode cada fluxo manualmente (**Execute Workflow**) para testar, ou ative o toggl
 |---|---|
 | n8n (self-hosted) | Grátis |
 | MySQL | Grátis |
-| IA (Groq free tier) | **Grátis** |
+| IA (Groq free tier) | Grátis |
+| WordPress (self-hosted) | Grátis |
+| Imagens (Pexels free tier) | Grátis |
 | **Total** | **R$ 0** |
 
 ---
 
 ## Roadmap
 
-- [ ] Publicação automática no WordPress (status `pronto` → `publicado`)
-- [ ] Geração/seleção de imagem destacada (ex.: Pexels/Unsplash grátis)
+- [x] Publicação automática no WordPress via REST API
+- [x] Imagem destacada automática via Pexels
 - [ ] Deduplicação de tendências (janela de 6h via `source_topic`)
 - [ ] Alertas no Telegram em caso de erro
 - [ ] Dashboard de analytics (Grafana / `vw_dashboard_realtime`)
