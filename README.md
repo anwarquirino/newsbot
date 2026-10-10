@@ -4,6 +4,8 @@ Sistema que **captura notícias e tendências, reescreve com IA e publica automa
 
 > Status atual: pipeline completo funcionando — captura de 9 feeds RSS em 7 áreas, monitoramento do Google Trends, reescrita com IA, publicação automática no WordPress (self-hosted) e imagem destacada via Pexels.
 
+> Painel de operação: [newsbot-painel](https://github.com/anwarquirino/newsbot-painel), em Next.js, lê este mesmo banco e permite acompanhar a fila, publicações, erros e logs, com ações de descartar, reprocessar e destravar sem interferir nos fluxos do n8n.
+
 ---
 
 ## Arquitetura
