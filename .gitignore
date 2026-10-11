@@ -9,7 +9,7 @@ API_botnews.txt
 backup.sql
 *.dump
 
-# Config do Claude Code (contém allowlist com dados locais/sensíveis)
+# Configurações locais de ferramentas de desenvolvimento
 .claude/
 
 # n8n (dados locais / credenciais)
